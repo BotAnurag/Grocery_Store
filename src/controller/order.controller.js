@@ -7,7 +7,6 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
 
 import { sendmail } from "../utils/nodemailer.js";
-// TODO:  reduce the product stock after order is made
 
 const createOrder = asyncHandler(async (req, res) => {
   const { orderItems, shippingAddress } = req.body; // orderItems contains product IDs and quantities
@@ -146,14 +145,16 @@ const getCurrentUserOrder = asyncHandler(async (req, res) => {
 
 const cancleOrder = asyncHandler(async (req, res) => {
   const userId = await User.findById(req.user._id).select(" _id");
+  const { id } = req.params;
   if (!userId) {
     throw new ApiError(400, "user not register");
   }
-  const order = await Order.findOne({ customer: userId });
+  const order = await Order.findOne({ _id: id });
 
   if (!order) {
     throw new ApiError(400, "no  order are made");
   }
+
   if (order.status === "SHIPPED" || order.status === "DELIVERED") {
     throw new ApiError(
       400,
@@ -163,7 +164,6 @@ const cancleOrder = asyncHandler(async (req, res) => {
   if (order.status === "CANCELED") {
     new ApiError(400, "order already cancled");
   }
-  console.log(typeof order);
 
   if (order.orderItems && Array.isArray(order.orderItems)) {
     await Promise.all(
@@ -182,7 +182,7 @@ const cancleOrder = asyncHandler(async (req, res) => {
   order.status = "CANCELED";
   await order.save();
 
-  res.status(200).json(new ApiResponse(200, "order cancled", order));
+  res.status(200).json(new ApiResponse(200, "order canceled", order));
 });
 
 const deleteOrder = asyncHandler(async (req, res) => {
@@ -215,12 +215,30 @@ const manageUserOrder = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const order = await Order.findById({ _id: id });
+    const ORDER_STATUS_THAT_CAN_BE_CAHNGE = ["SHIPPED", "PENDING"];
+
     if (!order) {
       throw new ApiError(400, "order dose not exist");
     }
-    if (!status) {
-      throw new ApiError(400, "status is not declared");
+    if (!ORDER_STATUS_THAT_CAN_BE_CAHNGE.includes(order.status)) {
+      throw new ApiError(400, `${order.status} order cannot be deleted`);
     }
+    const statusChange = await Order.findByIdAndUpdate(
+      { _id: id },
+      {
+        $set: {
+          status: status,
+        },
+      },
+      { new: true }
+    );
+
+    const name = req.user.fullName;
+    const email = req.user.email;
+    const subject = ` Order has been ${status}`;
+    const message = `<h1>Dear customer ${name} your order has been ${status} at ${new Date().toLocaleString()}</h1>`;
+    sendmail(email, subject, message);
+    res.status(400).json(new ApiResponse(200, statusChange, "chage succcess"));
   } catch (error) {
     throw new ApiError(
       400,
@@ -244,4 +262,5 @@ export {
   cancleOrder,
   getAllOrder,
   deleteOrder,
+  manageUserOrder,
 };

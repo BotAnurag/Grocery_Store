@@ -51,7 +51,7 @@ import orderRoute from "./router/order.routes.js";
 
 import otpRoute from "./router/otp.routes.js";
 
-import cartRoute from "./router/cart.router.js";
+import cartRoute from "./router/cart.routes.js";
 
 app.get("/", (req, res) => {
   res.send("up and running");
