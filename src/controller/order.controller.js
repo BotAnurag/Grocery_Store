@@ -179,10 +179,17 @@ const cancleOrder = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Order items are not defined or not an array");
   }
 
-  order.status = "CANCELED";
-  await order.save();
+  const statusChange = await Order.findByIdAndUpdate(
+    { _id: id },
+    {
+      $set: {
+        status: "CANCELED",
+      },
+    },
+    { new: true }
+  );
 
-  res.status(200).json(new ApiResponse(200, "order canceled", order));
+  res.status(200).json(new ApiResponse(200, "order canceled", statusChange));
 });
 
 const deleteOrder = asyncHandler(async (req, res) => {
