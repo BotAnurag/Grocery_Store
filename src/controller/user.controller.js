@@ -83,10 +83,6 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const otpemail = checkOtp.email;
   const dbotp = checkOtp.otp;
-  console.log(otpemail);
-  console.log(dbotp);
-  console.log(otp);
-  console.log(email);
 
   if (email !== otpemail || otp !== dbotp) {
     throw new ApiError(401, "invalid email  or otp ");

@@ -215,13 +215,13 @@ const manageUserOrder = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const order = await Order.findById({ _id: id });
-    const ORDER_STATUS_THAT_CAN_BE_CAHNGE = ["SHIPPED", "PENDING"];
+    const ORDER_STATUS_THAT_CAN_BE_change = ["SHIPPED", "PENDING"];
 
     if (!order) {
       throw new ApiError(400, "order dose not exist");
     }
-    if (!ORDER_STATUS_THAT_CAN_BE_CAHNGE.includes(order.status)) {
-      throw new ApiError(400, `${order.status} order cannot be deleted`);
+    if (!ORDER_STATUS_THAT_CAN_BE_change.includes(order.status)) {
+      throw new ApiError(400, `${order.status} order cannot be change`);
     }
     const statusChange = await Order.findByIdAndUpdate(
       { _id: id },
@@ -248,6 +248,20 @@ const manageUserOrder = asyncHandler(async (req, res) => {
   }
 });
 
+const searchOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    throw new ApiError("please provide id of the order");
+  }
+  const order = await Order.findById({ _id: id });
+
+  if (!order) {
+    throw new ApiError("order doesnot exist");
+  }
+
+  res.status(200).json(new ApiResponse(200, order, "found"));
+});
+
 const getAllOrder = asyncHandler(async (_, res) => {
   try {
     const order = await Order.find();
@@ -263,4 +277,5 @@ export {
   getAllOrder,
   deleteOrder,
   manageUserOrder,
+  searchOrder,
 };

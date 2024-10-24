@@ -8,6 +8,7 @@ import {
   cancleOrder,
   manageUserOrder,
   deleteOrder,
+  searchOrder,
 } from "../controller/order.controller.js";
 
 import { verifyJWT } from "../middleware/auth.middleware.js";
@@ -25,5 +26,6 @@ router.route("/delete/order/:id").delete(verifyJWT, deleteOrder);
 
 router.route("/").get(verifyJWT, verifyAdmin, getAllOrder);
 router.route("/mange/:id").patch(verifyJWT, verifyJWT, manageUserOrder);
+router.route("/search/:id").post(verifyJWT, verifyAdmin, searchOrder);
 
 export default router;
