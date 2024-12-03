@@ -1,7 +1,12 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
+import { User } from "./models/user.model.js";
+
+import { ApiResponse } from "./utils/Apiresponse.js";
+
 import dotenv from "dotenv";
+import { name } from "ejs";
 
 dotenv.config();
 
@@ -14,14 +19,17 @@ passport.use(
       callbackURL: "http://localhost:8000/api/v1/users/google/callback", // Your callback URL
       passReqToCallback: true, // Allows the request object to be passed into the callback
     },
-    (req, accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       // Here, you typically find or create a user in the database
       try {
-        console.log("Profile Information:", profile);
-        // console.log("Email Information:", profile.emails[0].value);
-        // console.log(accessToken);
-        // console.log(refreshToken);
+        console.log("Email Information:", profile.emails[0].value);
+        console.log("name", profile.displayName);
 
+        const userinfo = {
+          email: profile.emails[0].value,
+          name: profile.displayName,
+        };
+        req.info = userinfo;
         // For now, we'll just return the profile as is
         done(null, profile);
       } catch (err) {

@@ -20,7 +20,6 @@ const userSchema = new mongoose.Schema(
     },
     dateOfBirth: {
       type: Date, // Specifies that the field should be a Date type
-      required: true, // This field is required
       validate: {
         validator: function (v) {
           return moment(v, moment.ISO_8601, true).isValid(); // Validate if the date is in a valid ISO format
@@ -30,28 +29,31 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      required: true,
+
       enum: ["male", "female"],
       lowercase: true,
     },
 
     address: {
       type: String,
-      required: true,
     },
     password: {
       type: String,
-      required: true,
+
       minlenght: 8,
     },
     phone: {
       type: Number,
-      required: true,
     },
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
+    },
+    loginFrom: {
+      type: String,
+      enum: ["google", "us"],
+      default: "us",
     },
     refreshToken: {
       type: String,

@@ -5,7 +5,6 @@ import { Product } from "../models/product.model.js";
 import { asyncHandler } from "../utils/Asynchandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/Apiresponse.js";
-
 import { sendmail } from "../utils/nodemailer.js";
 
 const createOrder = asyncHandler(async (req, res) => {
@@ -143,8 +142,15 @@ const getCurrentUserOrder = asyncHandler(async (req, res) => {
     );
 });
 
+// TODO: sendmail  while cancle product
+
 const cancleOrder = asyncHandler(async (req, res) => {
-  const userId = await User.findById(req.user._id).select(" _id");
+  const userId = await User.findById(req.user._id).select("-password");
+  console.log(userId);
+
+  const mail = userId.email;
+  console.log(mail);
+
   const { id } = req.params;
   if (!userId) {
     throw new ApiError(400, "user not register");
@@ -188,6 +194,38 @@ const cancleOrder = asyncHandler(async (req, res) => {
     },
     { new: true }
   );
+
+  const message = `
+  <h1>Puzu Grocery Store</h1>
+  <p>Your order has been cancle successfully!</p>
+  <br>
+  <p>Your shipping address is: <b>${finalShippingAddress}</b></p>
+  <p>The products are:</p>
+  <table border="1" cellpadding="10">
+    <thead>
+      <tr>
+        <th>Product Name</th>
+        <th>Quantity</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${populatedOrderItems
+        .map(
+          (item) => `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.quantity}</td>
+      </tr>`
+        )
+        .join("")}
+    </tbody>
+  </table>
+  <br>
+  <p>The total price is: <b>${totalPrice}</b></p>
+`;
+  const subject = " Order Cancel  Successfull";
+
+  sendmail(mail, subject, message);
 
   res.status(200).json(new ApiResponse(200, "order canceled", statusChange));
 });
@@ -245,7 +283,7 @@ const manageUserOrder = asyncHandler(async (req, res) => {
     const subject = ` Order has been ${status}`;
     const message = `<h1>Dear customer ${name} your order has been ${status} at ${new Date().toLocaleString()}</h1>`;
     sendmail(email, subject, message);
-    res.status(400).json(new ApiResponse(200, statusChange, "chage succcess"));
+    res.status(200).json(new ApiResponse(200, statusChange, "chage succcess"));
   } catch (error) {
     throw new ApiError(
       400,

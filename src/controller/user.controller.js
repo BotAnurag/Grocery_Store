@@ -9,9 +9,7 @@ import { ApiResponse } from "../utils/Apiresponse.js";
 
 import jwt from "jsonwebtoken";
 
-import cookieParser from "cookie-parser";
-
-import passport from "passport";
+import passport from "../password.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -344,6 +342,7 @@ const requestPasswordReset = asyncHandler(async (req, res) => {
 // Controller to handle successful Google login
 const googleLoginSuccess = asyncHandler(async (req, res) => {
   if (req.user) {
+    console.log(" from the controller", req.user);
     res
       .status(200)
       .json(new ApiResponse(200, req.user, "Successfully Logged In"));
@@ -368,14 +367,14 @@ const googleAuth = asyncHandler((req, res, next) => {
     })(req, res, next);
   } else {
     // This is the callback after successful authentication
-    console.log("User is authenticated:", req.user);
+    // console.log("User is authenticated:", req.user);
     next(); // Proceed to the next middleware or response handling
   }
 });
 
 // Controller to handle Google authentication callback
-const googleCallback = asyncHandler((req, res, next) => {
-  passport.authenticate("google", (err, user, info) => {
+const googleCallback = asyncHandler(async (req, res, next) => {
+  passport.authenticate("google", async (err, user, info) => {
     if (err) {
       return next(err); // Handle errors during authentication
     }
@@ -384,13 +383,50 @@ const googleCallback = asyncHandler((req, res, next) => {
     }
 
     // Log in the user
-    req.logIn(user, (err) => {
+    req.logIn(user, async (err) => {
       if (err) {
         return next(err); // Handle errors during login
       }
+      const info = req.info;
+      const check = await User.findOne({ email: info.email });
+      if (check) {
+        if (check.loginFrom === "us") {
+          console.log("i am us check");
 
-      // Redirect to the client URI upon successful login
-      return res.redirect(process.env.CLIENT_URI);
+          throw new ApiError(400, "user already exist");
+        }
+
+        if (check.loginFrom === "google") {
+          console.log("i am google check");
+
+          const { accessToken } = await generateAccessAndRefreshToken(
+            check._id
+          );
+          const option = {
+            httpOnly: false,
+            secure: false,
+          };
+          return res
+            .status(200)
+            .cookie("accessToken", accessToken, option)
+            .json(new ApiResponse(200, "user login success"));
+        }
+      }
+
+      const newUser = await User.create({
+        fullName: info.name,
+        email: info.email,
+        loginFrom: "google",
+      });
+      const { accessToken } = await generateAccessAndRefreshToken(check._id);
+      const option = {
+        httpOnly: false,
+        secure: false,
+      };
+      return res
+        .status(200)
+        .cookie("accessToken", accessToken, option)
+        .json(new ApiResponse(200, "user login success"));
     });
   })(req, res, next);
 });
@@ -398,9 +434,6 @@ const googleCallback = asyncHandler((req, res, next) => {
 // Controller to handle logout
 const googleLogout = asyncHandler(async (req, res, next) => {
   if (req.isAuthenticated()) {
-    console.log("sesson before log out:", req.session);
-    console.log("Cookies before logout:", req.cookies);
-
     await req.logout((err) => {
       if (err) {
         return next(err);
@@ -408,6 +441,11 @@ const googleLogout = asyncHandler(async (req, res, next) => {
 
       // Clear the session cookie
       res.clearCookie("connect.sid", { path: "/" });
+      const options = {
+        httpOnly: false,
+        secure: false,
+      };
+      res.clearCookie("accessToken", options);
 
       // Destroy the session
       req.session.destroy((err) => {
@@ -418,7 +456,8 @@ const googleLogout = asyncHandler(async (req, res, next) => {
         console.log("Cookies after clearing:", req.cookies); // Check cookies after clearing
         console.log("User after logout:", req.user); // Should be undefined or null
         console.log("sesson after clearing:", req.session);
-        res.redirect("/"); // Redirect to home or login page
+        res.send("ok");
+        // res.redirect(""); // Redirect to home or login page
       });
     });
   } else {
